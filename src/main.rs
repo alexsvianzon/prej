@@ -1,7 +1,9 @@
+// main.rs
 use clap::{Command, arg, command};
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const NAME: &str = env!("CARGO_PKG_NAME");
+mod commands;
+mod constants;
+use crate::constants::VERSION;
+use crate::constants::NAME;
 
 fn main() {
     let matches = command!()
@@ -21,12 +23,8 @@ fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("add", sub_matches)) => println!(
-            "used '{NAME} add', adding project {}",
+        Some(("add", sub_matches)) => commands::add(
             sub_matches
-                .get_one::<String>("NAME")
-                .expect("Requires a name for 'add'")
-
         ),
         Some(("go", sub_matches)) => println!(
             "used '{NAME} go', switching to project {}",
