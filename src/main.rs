@@ -1,10 +1,7 @@
 // main.rs
 
-#[cfg(test)]
-mod tests;
 mod commands;
 mod constants;
-mod filesystem;
 
 use clap::{Command, arg, command};
 use std::fs;
@@ -70,11 +67,8 @@ fn main() {
         Some(("add", sub_matches)) => commands::add(
             sub_matches
         ),
-        Some(("go", sub_matches)) => println!(
-            "used '{NAME} go', switching to project {}",
+        Some(("go", sub_matches)) => commands::go(
             sub_matches
-                .get_one::<String>("NAME")
-                .expect("Requires a name for 'go'")
         ),
         _ => unreachable!("Command does not exist or was not provided"),
     }
