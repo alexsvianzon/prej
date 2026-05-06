@@ -11,15 +11,34 @@ pub struct File {
 impl File {
     pub fn new(str_path: &str) -> Self {
         let path = Path::new(str_path);
-        let byte_content = fs::read(path);
-        let string_content = String::from_utf8(byte_content);
+        
+        let read_result = fs::read(path);
+        let byte_content = match read_result {
+            Ok(content) => content,
+            Err(error) => panic!("Could not read from file, error: {error:?}."),
+        };
+
+        let conv_result = String::from_utf8(byte_content);
+        let string_content = match conv_result {
+            Ok(content) => content,
+            Err(error) => panic!("Could not convert utf8 to string, error: {error:?}."),
+        };
 
         Self {path, string_content};
     }
 
     pub fn read() {
-        let byte_content = fs::read(self.path);
-        let string_content = String::from_utf8(byte_content);
+        let read_result = fs::read(self.path);
+        let byte_content = match read_result {
+            Ok(content) => content,
+            Err(error) => panic!("Could not read from file, error: {error:?}."),
+        };
+
+        let conv_result = String::from_utf8(byte_content);
+        let string_content = match conv_result {
+            Ok(content) => content,
+            Err(error) => panic!("Could not convert utf8 to string, error: {error:?}."),
+        };
 
         self.content = string_content;
     }
@@ -33,15 +52,3 @@ impl File {
     }
 }
 
-#[test]
-fn file_struct_test() {
-    let content = "This message was generated while testing 'filesystem.rs'";
-    let path_str = "./test/unittest.txt";
-    let path = Path::new(path_str);
-    let mut file: File = File::new(path_str);
-
-    assert_eq!(file.path, path);
-
-    file.write(content.to_string());
-    assert_eq!(file::read(), content);
-}

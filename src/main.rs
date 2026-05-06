@@ -1,7 +1,10 @@
 // main.rs
 
+#[cfg(test)]
+mod tests;
 mod commands;
 mod constants;
+mod filesystem;
 
 use clap::{Command, arg, command};
 use std::fs;
