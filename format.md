@@ -29,3 +29,7 @@ It will also eventually need to store the init file path. On register, it should
 Options:
  - SQLite may be a bit heavy for the current application
  - Markup languages will help with size in the short term, but scaling up might be difficult
+
+ ## Init file format
+
+ The init file for projects will also need a format. Markup languages are much more ideal. They are used in things like GitHub actions.
