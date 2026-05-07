@@ -13,3 +13,8 @@ Existing options:
    - JSON
    - YML (Not a favorite)
    - XML
+
+Custom options:
+ - Markup Languages
+   - QANLang
+   - A new one (yay)
