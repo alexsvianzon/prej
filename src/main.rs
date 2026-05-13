@@ -4,8 +4,11 @@ mod commands;
 mod constants;
 
 use clap::{Command, arg, command};
+use rusqlite::{Connection, Result};
+
 use std::fs;
 use std::path::Path;
+
 use crate::constants::VERSION;
 use crate::constants::NAME;
 use crate::constants::OS;
@@ -42,6 +45,21 @@ fn debug() {
     println!("Finished DEBUG! Attempted write to a test file at {test_dir_display}.");
 }
 
+fn setup_database() -> Connection {
+    let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS projects (
+            id PRIMARY KEY,
+            name TEXT NOT NULL,
+            init_file_loc TEXT,
+        )",
+        ()
+    );
+
+    conn
+}
+
 fn main() {
     if constants::DEBUG {
         debug();
@@ -63,12 +81,16 @@ fn main() {
         )
         .get_matches();
 
+    let conn = setup_database();
+
     match matches.subcommand() {
         Some(("add", sub_matches)) => commands::add(
-            sub_matches
+            sub_matches,
+            conn
         ),
         Some(("go", sub_matches)) => commands::go(
-            sub_matches
+            sub_matches,
+            conn
         ),
         _ => unreachable!("Command does not exist or was not provided"),
     }
