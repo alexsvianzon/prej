@@ -52,7 +52,7 @@ fn setup_database() -> Connection {
         "CREATE TABLE IF NOT EXISTS projects (
             id PRIMARY KEY,
             name TEXT NOT NULL,
-            init_file_loc TEXT,
+            init_file_loc TEXT
         )",
         ()
     );

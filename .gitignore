@@ -1,4 +1,5 @@
 /target
 *.swp
+*.swo
 /test
 .DS_Store

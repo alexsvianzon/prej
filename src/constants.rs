@@ -14,3 +14,7 @@ pub const OS: &str = env::consts::OS;
 // filesystem variables
 pub const APPDATA_DIR: &str = "./{NAME}/";
 pub const TEST_DIR: &str = "./test/";
+pub const INIT_FILE_NAME: &str = "initfile.yml";
+
+// text
+pub const INIT_FILE_CONTENT: &str = "ur mom";
