@@ -19,16 +19,8 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
         matches
             .get_one::<String>("NAME")
             .expect("Requires a name for 'add'"));
-
-    let project = Project {
-        id: 0,
-        name: matches
-            .get_one::<String>("NAME")
-            .expect("Requires a name for 'add'")
-            .to_string(),
-        init_file_loc: String::new(),
-    };
-
+ 
+    let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
     let mut found: bool = false;
     for result in Walk::new("./") {
         let entry = match result {
@@ -36,9 +28,14 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
             Err(error) => panic!("Got an error while looking for init file: {error}"),
         };
 
-        if entry.file_name() == constants::INIT_FILE_NAME {
+        let name = entry.file_name();
+        let file_path = name.to_string_lossy();
+
+        if file_path.ends_with(constants::INIT_FILE_NAME) {
             println!("Found the init file!");
             found = true;
+            init_file_loc = file_path.to_string();
+
             break
         }
     }
@@ -51,6 +48,20 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
             Err(error) => panic!("Encountered an error while creating an init file: {error}"),
         }
     }
+    
+    let mut project = Project {
+        id: 0,
+        name: matches
+            .get_one::<String>("NAME")
+            .expect("Requires a name for 'add'")
+            .to_string(),
+        init_file_loc,
+    };
+
+    conn.execute(
+        "INSERT INTO projects (name, init_file_loc) VALUES (?1, ?2)",
+        (&project.name, &project.init_file_loc),
+    );
 }
 
 pub fn go(matches: &clap::ArgMatches, conn: Connection) {

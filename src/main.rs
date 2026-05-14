@@ -50,7 +50,7 @@ fn setup_database() -> Connection {
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
-            id PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             init_file_loc TEXT
         )",
