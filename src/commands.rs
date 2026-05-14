@@ -7,14 +7,16 @@ use std::fs;
 
 use rusqlite::Connection;
 use ignore::Walk;
+use anyhow::Error;
 
 pub struct Project {
     id: i32,
     name: String,
+    path: String,
     init_file_loc: String,
 }
 
-pub fn add(matches: &clap::ArgMatches, conn: Connection) {
+pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     println!("used '{NAME} add', adding project {}",
         matches
             .get_one::<String>("NAME")
@@ -34,7 +36,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
         if file_path.ends_with(constants::INIT_FILE_NAME) {
             println!("Found the init file!");
             found = true;
-            init_file_loc = file_path.to_string();
+            init_file_loc = ["./".to_string(), file_path.to_string()].concat();
 
             break
         }
@@ -42,11 +44,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
 
     if !found {
         println!("Init file not found, creating one instead");
-        let write_res = fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT);
-        match write_res {
-            Ok(_) => (),
-            Err(error) => panic!("Encountered an error while creating an init file: {error}"),
-        }
+        let write_res = fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
     }
     
     let mut project = Project {
@@ -55,13 +53,16 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) {
             .get_one::<String>("NAME")
             .expect("Requires a name for 'add'")
             .to_string(),
+        path: fs::canonicalize("./")?.to_string_lossy().to_string(),
         init_file_loc,
     };
 
     conn.execute(
-        "INSERT INTO projects (name, init_file_loc) VALUES (?1, ?2)",
-        (&project.name, &project.init_file_loc),
-    );
+        "INSERT INTO projects (name, path, init_file_loc) VALUES (?1, ?2, ?3)",
+        (&project.name, &project.path, &project.init_file_loc),
+    )?;
+
+    Ok(())
 }
 
 pub fn go(matches: &clap::ArgMatches, conn: Connection) {

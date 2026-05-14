@@ -8,6 +8,7 @@ use rusqlite::{Connection, Result};
 
 use std::fs;
 use std::path::Path;
+use anyhow::Error;
 
 use crate::constants::VERSION;
 use crate::constants::NAME;
@@ -45,22 +46,23 @@ fn debug() {
     println!("Finished DEBUG! Attempted write to a test file at {test_dir_display}.");
 }
 
-fn setup_database() -> Connection {
+fn setup_database() -> Result<Connection, Error> {
     let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
+            path TEXT NOT NULL,
             init_file_loc TEXT
         )",
         ()
-    );
+    )?;
 
-    conn
+    Ok(conn)
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     if constants::DEBUG {
         debug();
     }
@@ -81,17 +83,19 @@ fn main() {
         )
         .get_matches();
 
-    let conn = setup_database();
+    let conn = setup_database()?;
 
     match matches.subcommand() {
         Some(("add", sub_matches)) => commands::add(
             sub_matches,
             conn
-        ),
+        )?,
         Some(("go", sub_matches)) => commands::go(
             sub_matches,
             conn
         ),
         _ => unreachable!("Command does not exist or was not provided"),
     }
+
+    Ok(())
 }

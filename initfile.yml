@@ -30,7 +30,6 @@ demand:
 # the 'close' service lists commands that get run when the user:
 # - calls the service manually
 # - jumps to another project
-# - 'cd'-s out of the project directory
 #
 # beyond the user-defined tasks listed, the 'close' service also kills the processes started by the
 # 'setup' service
