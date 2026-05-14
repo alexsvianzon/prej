@@ -1,0 +1,30 @@
+# initfile spec 0.1.0
+#
+# the project manager uses this file to setup and run commands in projects.
+
+# the 'setup' service runs when the 'go' command is run
+# these commands get put into the background
+
+setup:
+  nodejs: # define a new service task
+    command: node # declare the base command
+    arguments: # define arguments for the command
+      - server.js
+
+# the 'run' service commands get run when the 'run' command is run
+# these commands are run in the foreground and must be stopped to gain back your terminal
+
+run:
+  jekyll:
+    command: jekyll
+    arguments:
+      - serve
+
+# the 'close' service runs when you:
+#  - switch to a different project
+#  - call it manually
+#  - use the 'leave' command (different from manual call)
+# 
+# commands that were opened in setup also get closed
+#
+# come up with an example
