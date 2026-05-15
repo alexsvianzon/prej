@@ -93,7 +93,7 @@ fn main() -> Result<(), Error> {
         Some(("go", sub_matches)) => commands::go(
             sub_matches,
             conn
-        ),
+        )?,
         _ => unreachable!("Command does not exist or was not provided"),
     }
 

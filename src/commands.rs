@@ -5,7 +5,7 @@ use crate::constants::NAME;
 
 use std::fs;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 use ignore::Walk;
 use anyhow::Error;
 
@@ -17,10 +17,12 @@ pub struct Project {
 }
 
 pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
-    println!("used '{NAME} add', adding project {}",
-        matches
-            .get_one::<String>("NAME")
-            .expect("Requires a name for 'add'"));
+    let proj_name = matches
+        .get_one::<String>("NAME")
+        .expect("Requires a name for 'add'")
+        .to_string();
+
+    println!("used '{NAME} add', adding project {}", proj_name);
  
     let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
     let mut found: bool = false;
@@ -49,10 +51,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     
     let mut project = Project {
         id: 0,
-        name: matches
-            .get_one::<String>("NAME")
-            .expect("Requires a name for 'add'")
-            .to_string(),
+        name: proj_name,
         path: fs::canonicalize("./")?.to_string_lossy().to_string(),
         init_file_loc,
     };
@@ -65,9 +64,33 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn go(matches: &clap::ArgMatches, conn: Connection) {
-    println!("used '{NAME} go', going to project {}",
-        matches
-            .get_one::<String>("NAME")
-            .expect("Requires a name for 'go'"));
+pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
+    let proj_name = matches
+        .get_one::<String>("NAME")
+        .expect("Requries a name for 'go'")
+        .to_string();
+
+    println!("used '{NAME} go', going to project {}", proj_name);
+
+    // the 'go' command needs to look up the project in the database, jump to that directory, start
+    // the daemon if necessary, connect to the daemon, and tell the daemon to start the processes
+    // in the initfile's 'start' service
+    
+    let mut statement = conn.prepare("SELECT id, name, path, init_file_loc FROM projects WHERE name = ?1")?;
+    let query = statement.query_row(params![proj_name], |row| {
+        Ok(Project {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            path: row.get("path")?,
+            init_file_loc: row.get("init_file_loc")?,
+        })
+    });
+
+    let project = match query {
+        Ok(proj) => proj,
+        Err(error) => panic!("Could not find that project in the database: {error}"),
+    };
+
+    Ok(())
+
 }
