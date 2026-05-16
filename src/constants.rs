@@ -4,7 +4,7 @@ use std::env;
 // debugging mode 
 // prints OS, version, and name,
 // tests filesystem operations
-pub const DEBUG: bool = true;
+pub const DEBUG: bool = false;
 
 // program variables
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

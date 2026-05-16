@@ -63,6 +63,28 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn list(conn: Connection) -> Result<(), Error> {
+    println!("use '{} list', listing all projects: \n", constants::NAME);
+
+    let mut statement = conn.prepare("SELECT id, name, path FROM projects")?;
+    let query = statement.query_map([], |row| {
+        Ok(Project {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            path: row.get("path")?,
+            init_file_loc: String::new(),
+        })
+    })?;
+
+    for proj in query {
+        let project = proj.unwrap();
+
+        println!("{}. Project '{}' at '{}'", project.id, project.name, project.path);
+    }
+
+    Ok(())
+}
+
 pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")

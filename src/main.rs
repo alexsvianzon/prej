@@ -78,6 +78,10 @@ fn main() -> Result<(), Error> {
                 .about("Switch to and initialize a project")
                 .arg(arg!([NAME])),
         )
+        .subcommand(
+            Command::new("list")
+                .about("List all registered projects")
+        )
         .get_matches();
 
     let conn = setup_database()?;
@@ -89,6 +93,9 @@ fn main() -> Result<(), Error> {
         )?,
         Some(("go", sub_matches)) => commands::go(
             sub_matches,
+            conn
+        )?,
+        Some(("list", sub_matches)) => commands::list(
             conn
         )?,
         _ => unreachable!("Command does not exist or was not provided"),
