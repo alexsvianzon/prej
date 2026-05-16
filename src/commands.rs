@@ -1,7 +1,6 @@
 // commands.rs
 
 use crate::constants;
-use crate::constants::NAME;
 
 use std::fs;
 
@@ -22,7 +21,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .expect("Requires a name for 'add'")
         .to_string();
 
-    println!("used '{NAME} add', adding project {}", proj_name);
+    println!("used '{} add', adding project {}", constants::NAME, proj_name);
  
     let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
     let mut found: bool = false;
@@ -70,11 +69,13 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .expect("Requries a name for 'go'")
         .to_string();
 
-    println!("used '{NAME} go', going to project {}", proj_name);
+    println!("used '{} go', going to project {}", constants::NAME, proj_name);
 
     // the 'go' command needs to look up the project in the database, jump to that directory, start
     // the daemon if necessary, connect to the daemon, and tell the daemon to start the processes
     // in the initfile's 'start' service
+    //
+    // so far, the 'go' command can look up the project in the database
     
     let mut statement = conn.prepare("SELECT id, name, path, init_file_loc FROM projects WHERE name = ?1")?;
     let query = statement.query_row(params![proj_name], |row| {
@@ -92,5 +93,4 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     };
 
     Ok(())
-
 }

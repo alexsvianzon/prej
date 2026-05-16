@@ -1,4 +1,4 @@
-// constants.rs
+// constants
 use std::env;
 
 // debugging mode 
@@ -18,3 +18,4 @@ pub const INIT_FILE_NAME: &str = "initfile.yml";
 
 // text
 pub const INIT_FILE_CONTENT: &str = "ur mom";
+

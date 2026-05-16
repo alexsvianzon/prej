@@ -2,6 +2,7 @@
 
 mod commands;
 mod constants;
+mod protocol;
 
 use clap::{Command, arg, command};
 use rusqlite::{Connection, Result};
@@ -10,12 +11,8 @@ use std::fs;
 use std::path::Path;
 use anyhow::Error;
 
-use crate::constants::VERSION;
-use crate::constants::NAME;
-use crate::constants::OS;
-
 fn debug() {
-    println!("DEBUG is enabled. Version is {VERSION} of {NAME} app on {OS}.");
+    println!("DEBUG is enabled. Version is {} of {} app on {}.", constants::VERSION, constants::NAME, constants::OS);
     
     let test_dir_path = Path::new(constants::TEST_DIR);
     let canon_result = fs::canonicalize(test_dir_path);
@@ -69,7 +66,7 @@ fn main() -> Result<(), Error> {
 
     let matches = command!()
         .subcommand_required(true)
-        .version(VERSION)
+        .version(constants::VERSION)
         .about("A simple registry-based project manager")
         .subcommand(
             Command::new("add")
