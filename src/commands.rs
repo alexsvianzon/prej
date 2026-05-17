@@ -45,11 +45,10 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     if !found {
         println!("Init file not found, creating one instead");
-        let write_res = fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
+        fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
     }
     
-    let mut project = Project {
-        id: 0,
+    let project = Project { id: 0,
         name: proj_name,
         path: fs::canonicalize("./")?.to_string_lossy().to_string(),
         init_file_loc,
@@ -113,6 +112,8 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         Ok(proj) => proj,
         Err(error) => panic!("Could not find that project in the database: {error}"),
     };
+
+    println!("Found project '{}' at path {}.", project.name, project.path);
 
     Ok(())
 }
