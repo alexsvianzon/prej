@@ -8,7 +8,7 @@ pub const NAME: &str = env!("CARGO_PKG_NAME");
 pub const OS: &str = env::consts::OS;
 
 // filesystem variables
-pub const APPDATA_DIR: &str = concat!("./", NAME, "/");
+pub const APPDATA_DIR: &str = "./{NAME}/";
 pub const INIT_FILE_NAME: &str = "initfile.yml";
 
 // text

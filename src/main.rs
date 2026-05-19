@@ -43,6 +43,11 @@ fn main() -> Result<(), Error> {
             Command::new("list")
                 .about("List all registered projects")
         )
+        .subcommand(
+            Command::new("rm")
+                .about("Remove a registered project")
+                .arg(arg!([NAME])),
+        )
         .get_matches();
 
     let conn = setup_database()?;
@@ -57,6 +62,10 @@ fn main() -> Result<(), Error> {
             conn
         )?,
         Some(("list", _sub_matches)) => commands::list(
+            conn
+        )?,
+        Some(("rm", sub_matches)) => commands::rm(
+            sub_matches,
             conn
         )?,
         _ => unreachable!("Command does not exist or was not provided"),

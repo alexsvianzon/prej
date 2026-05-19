@@ -61,7 +61,19 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     Ok(())
 }
+pub fn rm(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error>{
+    let proj_name = matches
+        .get_one::<String>("NAME")
+        .expect("Requires a name for 'rm'")
+        .to_string();
 
+    conn.execute("DELETE FROM projects WHERE name = ?1",
+        ((proj_name),),
+    )?;
+
+    Ok(())
+}
+        
 pub fn list(conn: Connection) -> Result<(), Error> {
     println!("use '{} list', listing all projects: \n", constants::NAME);
 
