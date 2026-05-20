@@ -1,7 +1,7 @@
 // main.rs
 
 mod commands;
-mod constants;
+use shared::constants;
 
 use clap::{Command, arg, command};
 use rusqlite::{Connection, Result};
