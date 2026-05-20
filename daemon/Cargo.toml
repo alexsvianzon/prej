@@ -1,8 +1,9 @@
 [package]
 name = "pmd"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2024"
 
 [dependencies]
 tokio = { workspace = true }
 shared = { path = "../shared" }
+anyhow = { workspace = true }

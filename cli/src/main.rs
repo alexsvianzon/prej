@@ -5,6 +5,7 @@ use shared::constants;
 
 use clap::{Command, arg, command};
 use rusqlite::{Connection, Result};
+use tokio::net::UnixStream;
 
 use anyhow::Error;
 
@@ -24,7 +25,10 @@ fn setup_database() -> Result<Connection, Error> {
     Ok(conn)
 }
 
-fn main() -> Result<(), Error> {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    let stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
+
     let matches = command!()
         .subcommand_required(true)
         .version(constants::VERSION)
