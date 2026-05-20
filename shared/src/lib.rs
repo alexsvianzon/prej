@@ -1,11 +1,5 @@
 // protocols
 
 pub mod constants;
+pub mod protocol;
 
-enum Request {
-    Ping,
-}
-
-enum Response {
-    Pong,
-}

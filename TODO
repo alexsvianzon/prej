@@ -1,8 +1,3 @@
-Move the debug function to the test file
-Get the add command to register a project
- - Create a format
- - Register to a directory relative to the WD for now
-
  I need a day to clean up all the code
   - Get core functionallity out by then
   - Clear up
@@ -10,3 +5,11 @@ Get the add command to register a project
     - Inconsistent error handling
     - Inconsistencies in general
     - Weird or bad code
+
+The daemon should
+  - Listen for a request
+  - Send that request to a worker
+  - The worker processes the request
+    - If it's a process request, send to process manager
+    - If it's anything else, handle in function
+  - Respond to requester

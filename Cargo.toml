@@ -11,3 +11,4 @@ members = [
 anyhow = "1.0.102"
 rusqlite = { version = "0.39.0", features = ["bundled"] }
 tokio = { version = "1.52.3", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }

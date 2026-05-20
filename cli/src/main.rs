@@ -1,10 +1,16 @@
 // main.rs
 
 mod commands;
+
 use shared::constants;
 
+use std::io;
+
 use clap::{Command, arg, command};
+
 use rusqlite::{Connection, Result};
+
+use tokio::io::Interest;
 use tokio::net::UnixStream;
 
 use anyhow::Error;
@@ -28,6 +34,20 @@ fn setup_database() -> Result<Connection, Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
+    
+    let ready = stream.ready(Interest::WRITABLE).await?;
+
+    for i in 0..25 {
+        if ready.is_writable() {
+            match stream.try_write(format!("message {}\n", i).as_bytes()) {
+                Ok(_) => (),
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (),
+                Err(e) => {
+                    return Err(e.into());
+                }
+            }
+        }
+    }
 
     let matches = command!()
         .subcommand_required(true)
