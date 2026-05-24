@@ -39,8 +39,8 @@ async fn main() -> Result<(), Error> {
 
     for _ in 0..25 {
         let message_struct = protocol::Message {
-            id: Uuid::new_v4(),
-            msg: protocol::Content::Request(protocol::Request::Ping),
+            uuid: Uuid::new_v4(),
+            job: protocol::Job::StartProcess,
         };
 
         let message = serde_json::to_string(&message_struct).unwrap();

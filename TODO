@@ -14,13 +14,12 @@ The daemon should
     - If it's anything else, handle in function
   - Respond to requester
 
-Handling Request/Response:
- - On Request
-  - Store UUID in cmd table
-  - If the request is a long term process,
-   - Write the UUID to state table
-   - Response is 'active' (or some variation so CLI knows)
-  - Else,
-   - Process request
-   - Write response
-   - When CLI needs, it will find the UUID of a request and will handle the response
+Request/Response Form:
+  - CLI sends request cmd with UUID through socket
+  - CLI writes request to the database
+  - Daemon receives the command and looks at database for request
+  - Daemon process request
+    - If it's long term, write the response as active and monitor
+    - If it's short term, process and write response to database
+  - Daemon sends response cmd with UUID through socket
+  - CLI receives the command and looks at database for response
