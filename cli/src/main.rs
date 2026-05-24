@@ -29,6 +29,25 @@ fn setup_database() -> Result<Connection, Error> {
         )",
         ()
     )?;
+    
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS commands (
+            uuid TEXT PRIMARY KEY,
+            kind TEXT NOT NULL,
+            args TEXT NOT NULL,
+            response TEXT
+        )",
+        ()
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS state (
+            uuid TEXT PRIMARY KEY,
+            pid INTEGER NOT NULL,
+            name TEXT NOT NULL
+        )",
+        ()
+    )?;
 
     Ok(conn)
 }

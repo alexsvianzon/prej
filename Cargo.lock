@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "project-manager"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "uuid",
