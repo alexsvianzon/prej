@@ -50,26 +50,11 @@ async fn main() -> Result<(), Error> {
     loop {
         match listen.accept().await {
             Ok((stream, _addr)) => {
-                let ready = stream.ready(Interest::READABLE).await?;
+                let mut reader = BufReader::new(stream);
+                let mut lines = reader.lines();
 
-                if ready.is_readable() {
-                    let mut data = vec![0; 1024];
-
-                    match stream.try_read(&mut data) {
-                        Ok(_) => {
-                            let read = String::from_utf8(data)?;
-
-                            for line in read.lines() {
-                                tx.send(line.to_string()).await?;
-                            }
-                        }
-                        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                            continue;
-                        }
-                        Err(e) => {
-                            return Err(e.into());
-                        }
-                    }
+                while let Some(line) = lines.next_line().await? {
+                    tx.send(line).await?;
                 }
             }
             Err(e) => panic!("{}", e),
