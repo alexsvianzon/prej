@@ -5,7 +5,7 @@ use shared::constants;
 use std::sync::Arc;
 use std::io;
 
-use tokio::io::Interest;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::fs;
 use tokio::net::UnixListener;
 use tokio::sync::{mpsc, Mutex};

@@ -2,7 +2,7 @@
 
 mod commands;
 
-use shared::constants;
+use shared::{protocol, constants};
 
 use std::io;
 
@@ -10,10 +10,12 @@ use clap::{Command, arg, command};
 
 use rusqlite::{Connection, Result};
 
-use tokio::io::Interest;
+use tokio::io::AsyncWriteExt;
 use tokio::net::UnixStream;
 
 use anyhow::Error;
+
+use uuid::Uuid;
 
 fn setup_database() -> Result<Connection, Error> {
     let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
@@ -33,20 +35,17 @@ fn setup_database() -> Result<Connection, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
-    
-    let ready = stream.ready(Interest::WRITABLE).await?;
+    let mut stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
 
-    for i in 0..25 {
-        if ready.is_writable() {
-            match stream.try_write(format!("message {}\n", i).as_bytes()) {
-                Ok(_) => (),
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (),
-                Err(e) => {
-                    return Err(e.into());
-                }
-            }
-        }
+    for _ in 0..25 {
+        let message_struct = protocol::Message {
+            id: Uuid::new_v4(),
+            msg: protocol::Content::Request(protocol::Request::Ping),
+        };
+
+        let message = serde_json::to_string(&message_struct).unwrap();
+
+        stream.write_all(format!("{}\n", message).as_bytes()).await?;
     }
 
     let matches = command!()

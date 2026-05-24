@@ -2,12 +2,26 @@
 
 use serde::{Serialize, Deserialize};
 
+use uuid::Uuid;
+
 #[derive(Serialize, Deserialize)]
-enum Request {
+pub enum Request {
     Ping,
 }
 
 #[derive(Serialize, Deserialize)]
-enum Response {
+pub enum Response {
     Pong,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum Content {
+    Request(Request),
+    Response(Response),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Message {
+    pub id: Uuid,
+    pub msg: Content,
 }
