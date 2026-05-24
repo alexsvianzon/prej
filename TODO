@@ -13,3 +13,14 @@ The daemon should
     - If it's a process request, send to process manager
     - If it's anything else, handle in function
   - Respond to requester
+
+Handling Request/Response:
+ - On Request
+  - Store UUID in cmd table
+  - If the request is a long term process,
+   - Write the UUID to state table
+   - Response is 'active' (or some variation so CLI knows)
+  - Else,
+   - Process request
+   - Write response
+   - When CLI needs, it will find the UUID of a request and will handle the response
