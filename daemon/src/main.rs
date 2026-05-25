@@ -5,32 +5,33 @@ use shared::{protocol, constants};
 use std::sync::Arc;
 use std::io;
 
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::fs;
 use tokio::net::UnixListener;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Mutex, oneshot};
 
 use rusqlite::{Connection, params};
 
 use anyhow::Error;
 
-struct Tmp {
-    content: String,
+struct Job {
+    request: String,
+    response: oneshot::Sender<String>,
 }
 
-async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<String>>>) {
+async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
     loop {
-        let request = {
+        let job = {
             let mut guard = rx.lock().await;
             guard.recv().await
         };
 
-        match request {
-            Some(request) => {
+        match job {
+            Some(job) => {
                 let conn = Connection::open("projects.db")
                     .expect("Failed to open a connection to the database");
                 
-                let message: protocol::Message = serde_json::from_str(&request).unwrap();
+                let message: protocol::Message = serde_json::from_str(&job.request).unwrap();
 
                 let mut stmt = conn.prepare("SELECT uuid, content FROM commands WHERE uuid = ?1");
                 let mut statement = match stmt {
@@ -38,18 +39,22 @@ async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<String>>>) {
                     Err(error) => panic!("i give up, error: {error}"),
                 };
 
-                let query = statement.query_row(params![message.uuid.to_string()], |row| {
-                    Ok(Tmp {
-                        content: row.get("content")?,
-                    })
-                });
+                let content: String = statement.query_row(params![message.uuid.to_string()], |row| {
+                    row.get("content")
+                })
+                .expect("could not find uuid");
 
-                let content = match query {
-                    Ok(res) => res,
-                    Err(error) => panic!("could not find the uuid: {error}"),
+                println!("{}", content);
+
+                let response = match content {
+                    a if a == "ping".to_string() => "pong",
+                    _ => "pong",
                 };
 
-                println!("{}", content.content);
+                conn.execute(
+                    "UPDATE commands SET response = ?1 WHERE uuid = ?2",
+                    (response, message.uuid.to_string()),
+                ).expect("message");
             }
             None => break,
         }
@@ -64,7 +69,7 @@ async fn main() -> Result<(), Error> {
         fs::remove_file(&path).await?;
     }
 
-    let (tx, mut rx) = mpsc::channel::<String>(32);
+    let (tx, mut rx) = mpsc::channel::<Job>(32);
 
     let rx_arc = Arc::new(Mutex::new(rx));
 
@@ -76,16 +81,40 @@ async fn main() -> Result<(), Error> {
     let listen = UnixListener::bind(path).unwrap();
 
     loop {
-        match listen.accept().await {
-            Ok((stream, _addr)) => {
-                let mut reader = BufReader::new(stream);
-                let mut lines = reader.lines();
+        let (stream, _) = listen.accept().await?;
 
-                while let Some(line) = lines.next_line().await? {
-                    tx.send(line).await?;
+        let tx_clone = tx.clone();
+
+        tokio::spawn(async move {
+            let (reader, mut writer) = tokio::io::split(stream);
+
+            let reader = BufReader::new(reader);
+            let mut lines = reader.lines();
+
+            while let Some(line) = lines.next_line().await.unwrap() {
+                let (os_tx, os_rx) = oneshot::channel();
+
+                let job = Job {
+                    request: line,
+                    response: os_tx,
+                };
+
+                tx_clone.send(job).await;
+
+                match os_rx.await {
+                    Ok(response) => {
+                        let _ = writer
+                            .write_all(format!("{}\n", response).as_bytes())
+                            .await;
+                    }
+
+                    Err(_) => {
+                        let _ = writer
+                            .write_all(b"dropped\n")
+                            .await;
+                    }
                 }
             }
-            Err(e) => panic!("{}", e),
-        }
+        });
     }
 }
