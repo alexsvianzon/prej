@@ -1,9 +1,11 @@
 [package]
 name = "pmd"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 tokio = { workspace = true }
 shared = { path = "../shared" }
 anyhow = { workspace = true }
+rusqlite = { workspace = true }
+serde_json = { workspace = true }

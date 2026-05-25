@@ -20,6 +20,8 @@ use uuid::Uuid;
 fn setup_database() -> Result<Connection, Error> {
     let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
 
+    conn.pragma_update_and_check(None, "journal_mode", &"WAL", |_| Ok(()))?;
+ 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY,
@@ -33,18 +35,8 @@ fn setup_database() -> Result<Connection, Error> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS commands (
             uuid TEXT PRIMARY KEY,
-            kind TEXT NOT NULL,
-            args TEXT NOT NULL,
+            content TEXT NOT NULL,
             response TEXT
-        )",
-        ()
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS state (
-            uuid TEXT PRIMARY KEY,
-            pid INTEGER NOT NULL,
-            name TEXT NOT NULL
         )",
         ()
     )?;
@@ -54,12 +46,26 @@ fn setup_database() -> Result<Connection, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let conn = setup_database()?;
+
     let mut stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
 
-    for _ in 0..25 {
+    for _ in 0..2 {
+        let uuid = Uuid::new_v4();
+        let content = protocol::Content::Ping;
+        let content_string = match content {
+            protocol::Content::Ping => "ping",
+            _ => "ping",
+        };
+
+        conn.execute(
+            "INSERT INTO commands (uuid, content) VALUES (?1, ?2)",
+            (&uuid.to_string(), &content_string),
+        )?;
+
         let message_struct = protocol::Message {
-            uuid: Uuid::new_v4(),
-            job: protocol::Job::StartProcess,
+            uuid: uuid,
+            kind: protocol::Kind::Request,
         };
 
         let message = serde_json::to_string(&message_struct).unwrap();
@@ -91,8 +97,6 @@ async fn main() -> Result<(), Error> {
                 .arg(arg!([NAME])),
         )
         .get_matches();
-
-    let conn = setup_database()?;
 
     match matches.subcommand() {
         Some(("add", sub_matches)) => commands::add(

@@ -469,6 +469,8 @@ name = "pmd"
 version = "0.1.4"
 dependencies = [
  "anyhow",
+ "rusqlite",
+ "serde_json",
  "shared",
  "tokio",
 ]
@@ -494,7 +496,7 @@ dependencies = [
 
 [[package]]
 name = "project-manager"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "clap",
