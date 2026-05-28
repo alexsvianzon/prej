@@ -31,7 +31,7 @@ async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
                 let conn = Connection::open("projects.db")
                     .expect("Failed to open a connection to the database");
                 
-                let message: protocol::Message = serde_json::from_str(&job.request).unwrap();
+                let incoming: protocol::Message = serde_json::from_str(&job.request).unwrap();
 
                 let mut stmt = conn.prepare("SELECT uuid, content FROM commands WHERE uuid = ?1");
                 let mut statement = match stmt {
@@ -39,22 +39,36 @@ async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
                     Err(error) => panic!("i give up, error: {error}"),
                 };
 
-                let content: String = statement.query_row(params![message.uuid.to_string()], |row| {
+                let content: String = statement.query_row(params![incoming.uuid.to_string()], |row| {
                     row.get("content")
                 })
                 .expect("could not find uuid");
 
                 println!("{}", content);
 
-                let response = match content {
-                    a if a == "ping".to_string() => "pong",
-                    _ => "pong",
+                let response = match content.as_str() {
+                    "ping" => "pong".to_string(),
+                    _ => "pong".to_string(),
+                };
+
+                let response_e = match response.as_str() {
+                    "pong" => protocol::Response::Pong,
+                    _ => protocol::Response::Pong,
                 };
 
                 conn.execute(
                     "UPDATE commands SET response = ?1 WHERE uuid = ?2",
-                    (response, message.uuid.to_string()),
+                    (response, incoming.uuid.to_string()),
                 ).expect("message");
+
+                let outgoing = protocol::Message {
+                    uuid: incoming.uuid,
+                    kind: protocol::Kind::Response,
+                };
+
+                let outgoing_ser = serde_json::to_string(&outgoing).expect("could not something");
+
+                job.response.send(outgoing_ser);
             }
             None => break,
         }
@@ -106,6 +120,8 @@ async fn main() -> Result<(), Error> {
                         let _ = writer
                             .write_all(format!("{}\n", response).as_bytes())
                             .await;
+
+                        println!("{}", response);
                     }
 
                     Err(_) => {

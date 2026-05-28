@@ -36,7 +36,8 @@ fn setup_database() -> Result<Connection, Error> {
         "CREATE TABLE IF NOT EXISTS commands (
             uuid TEXT PRIMARY KEY,
             content TEXT NOT NULL,
-            response TEXT
+            response TEXT,
+            consumed BOOL
         )",
         ()
     )?;

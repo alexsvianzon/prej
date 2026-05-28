@@ -1,12 +1,9 @@
 // socket
-
-// this file needs to provide functions for
-// 1. connecting to a socket
-// 2. writing to the socket
-// 3. reading from the socket
 // 
-// at the same time, it should store message ids so it can get the right response back to the
-// program. that, or i just hope for the best
+// the function(s) should be able to
+// 1. create a connection to the socket
+// 2. send a request and write the content to the database
+// 3. read responses and wait for the correct one
 
 use shared::constants;
 
