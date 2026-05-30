@@ -1,6 +1,7 @@
 // main.rs
 
 mod commands;
+mod socket;
 
 use shared::{protocol, constants};
 
@@ -49,30 +50,7 @@ fn setup_database() -> Result<Connection, Error> {
 async fn main() -> Result<(), Error> {
     let conn = setup_database()?;
 
-    let mut stream = UnixStream::connect(format!("/var/run/{}.sock", constants::NAME)).await?;
-
-    for _ in 0..2 {
-        let uuid = Uuid::new_v4();
-        let content = protocol::Content::Ping;
-        let content_string = match content {
-            protocol::Content::Ping => "ping",
-            _ => "ping",
-        };
-
-        conn.execute(
-            "INSERT INTO commands (uuid, content) VALUES (?1, ?2)",
-            (&uuid.to_string(), &content_string),
-        )?;
-
-        let message_struct = protocol::Message {
-            uuid: uuid,
-            kind: protocol::Kind::Request,
-        };
-
-        let message = serde_json::to_string(&message_struct).unwrap();
-
-        stream.write_all(format!("{}\n", message).as_bytes()).await?;
-    }
+    socket::request_and_wait(&conn).await?;
 
     let matches = command!()
         .subcommand_required(true)
