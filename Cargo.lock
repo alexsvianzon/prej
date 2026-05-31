@@ -466,7 +466,7 @@ checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
 
 [[package]]
 name = "pmd"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "rusqlite",
@@ -496,7 +496,7 @@ dependencies = [
 
 [[package]]
 name = "project-manager"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "clap",

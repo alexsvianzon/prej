@@ -36,7 +36,7 @@ fn setup_database() -> Result<Connection, Error> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS commands (
             uuid TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
+            request TEXT NOT NULL,
             response TEXT,
             consumed BOOL
         )",
@@ -50,7 +50,8 @@ fn setup_database() -> Result<Connection, Error> {
 async fn main() -> Result<(), Error> {
     let conn = setup_database()?;
 
-    socket::request_and_wait(&conn).await?;
+    let content = protocol::Content::Ping;
+    socket::request_and_wait(&conn, content).await?;
 
     let matches = command!()
         .subcommand_required(true)

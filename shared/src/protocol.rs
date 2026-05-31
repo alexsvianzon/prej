@@ -11,7 +11,7 @@ pub enum Kind {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Message {
+pub struct Notification {
     pub uuid: Uuid,
     pub kind: Kind,
 }
@@ -19,9 +19,10 @@ pub struct Message {
 #[derive(Serialize, Deserialize)]
 pub enum Content {
     Ping,
+    Pong,
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum Response {
-    Pong,
+pub struct Message {
+    pub content: Content,
 }
