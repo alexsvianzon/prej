@@ -5,18 +5,11 @@ mod socket;
 
 use shared::{protocol, constants};
 
-use std::io;
-
 use clap::{Command, arg, command};
 
 use rusqlite::{Connection, Result};
 
-use tokio::io::AsyncWriteExt;
-use tokio::net::UnixStream;
-
 use anyhow::Error;
-
-use uuid::Uuid;
 
 fn setup_database() -> Result<Connection, Error> {
     let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
@@ -38,7 +31,7 @@ fn setup_database() -> Result<Connection, Error> {
             uuid TEXT PRIMARY KEY,
             request TEXT NOT NULL,
             response TEXT,
-            consumed BOOL
+            consumed BOOLEAN DEFAULT FALSE
         )",
         ()
     )?;

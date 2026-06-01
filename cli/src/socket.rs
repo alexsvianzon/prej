@@ -10,7 +10,8 @@ use shared::{protocol, constants};
 use std::io;
 
 use tokio::net::UnixStream;
-use tokio::io::{BufReader, AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
+// use tokio::io::{BufReader, AsyncBufReadExt, AsyncWriteExt};
 
 use anyhow::Error;
 
@@ -44,6 +45,10 @@ pub async fn request_and_wait(conn: &Connection, content: protocol::Content) -> 
     match stream.try_read(&mut buf) {
         Ok(_) => {
             println!("{}", String::from_utf8(buf.to_vec())?);
+            conn.execute(
+                "UPDATE commands SET consumed = TRUE WHERE uuid = ?1",
+                ((&uuid.to_string()),),
+            )?;
         }
         Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (),
         Err(e) => { return Err(e.into()); }

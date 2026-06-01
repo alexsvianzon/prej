@@ -18,7 +18,7 @@ struct Job {
     response: oneshot::Sender<String>,
 }
 
-async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
+async fn worker(_id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
     loop {
         let job = {
             let mut guard = rx.lock().await;
@@ -61,7 +61,7 @@ async fn worker(id: u32, rx: Arc<Mutex<mpsc::Receiver<Job>>>) {
                     kind: protocol::Kind::Response,
                 }).unwrap();
 
-                job.response.send(out_notification);
+                job.response.send(out_notification).unwrap();
             }
             None => break,
         }
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Error> {
         fs::remove_file(&path).await?;
     }
 
-    let (tx, mut rx) = mpsc::channel::<Job>(32);
+    let (tx, rx) = mpsc::channel::<Job>(32);
 
     let rx_arc = Arc::new(Mutex::new(rx));
 
@@ -106,7 +106,7 @@ async fn main() -> Result<(), Error> {
                     response: os_tx,
                 };
 
-                tx_clone.send(job).await;
+                tx_clone.send(job).await.unwrap();
 
                 match os_rx.await {
                     Ok(response) => {
