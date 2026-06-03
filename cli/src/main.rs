@@ -47,13 +47,6 @@ fn setup_database() -> Result<Connection, Error> {
 async fn main() -> Result<(), Error> {
     let conn = setup_database()?;
 
-    let daemon_out = File::create("out.txt").expect("could not open file");
-    let _ = ShellCommand::new("sudo")
-        .stdout(daemon_out)
-        .arg("./target/debug/prejd")
-        .spawn()
-        .expect("could not spawn daemon");
-
     let matches = command!()
         .subcommand_required(true)
         .version(constants::VERSION)

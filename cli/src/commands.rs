@@ -24,8 +24,6 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .get_one::<String>("NAME")
         .expect("Requires a name for 'add'")
         .to_string();
-
-    println!("used '{} add', adding project {}", constants::NAME, proj_name);
  
     let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
     let mut found: bool = false;
@@ -79,8 +77,6 @@ pub fn rm(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error>{
 }
         
 pub fn list(conn: Connection) -> Result<(), Error> {
-    println!("use '{} list', listing all projects: \n", constants::NAME);
-
     let mut statement = conn.prepare("SELECT id, name, path FROM projects")?;
     let query = statement.query_map([], |row| {
         Ok(Project {
@@ -105,9 +101,7 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .get_one::<String>("NAME")
         .expect("Requries a name for 'go'")
         .to_string();
-
-    println!("used '{} go', going to project {}", constants::NAME, proj_name);
-
+    
     // the 'go' command needs to look up the project in the database, jump to that directory, start
     // the daemon if necessary, connect to the daemon, and tell the daemon to start the processes
     // in the initfile's 'start' service
