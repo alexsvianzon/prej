@@ -133,3 +133,24 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     Ok(())
 }
+
+pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
+    let proj_name = matches
+        .get_one::<String>("NAME")
+        .expect("Requries a name for 'dir'")
+        .to_string();
+    
+    let mut statement = conn.prepare("SELECT path FROM projects WHERE name = ?1")?;
+    let query = statement.query_row(params![proj_name], |row| {
+        row.get("path")
+    });
+
+    let dir: String = match query {
+        Ok(proj) => proj,
+        Err(error) => panic!("Could not find that project in the database: {error}"),
+    };
+
+    println!("{}", dir.to_string());
+
+    Ok(())
+}

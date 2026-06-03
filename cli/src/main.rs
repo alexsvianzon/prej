@@ -15,7 +15,8 @@ use rusqlite::{Connection, Result};
 use anyhow::Error;
 
 fn setup_database() -> Result<Connection, Error> {
-    let conn = Connection::open("projects.db").expect("Failed to open a connection to the database");
+    let conn = Connection::open(format!("{}projects.db", constants::APPDATA_DIR))
+        .expect("Failed to open a connection to the database");
 
     conn.pragma_update_and_check(None, "journal_mode", &"WAL", |_| Ok(()))?;
  
@@ -53,9 +54,6 @@ async fn main() -> Result<(), Error> {
         .spawn()
         .expect("could not spawn daemon");
 
-    let content = protocol::Content::Ping;
-    socket::request_and_wait(&conn, content).await?;
-
     let matches = command!()
         .subcommand_required(true)
         .version(constants::VERSION)
@@ -79,6 +77,11 @@ async fn main() -> Result<(), Error> {
                 .about("Remove a registered project")
                 .arg(arg!([NAME])),
         )
+        .subcommand(
+            Command::new("dir")
+                .about("Print the directory of a project")
+                .arg(arg!([NAME])),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -94,6 +97,10 @@ async fn main() -> Result<(), Error> {
             conn
         )?,
         Some(("rm", sub_matches)) => commands::rm(
+            sub_matches,
+            conn
+        )?,
+        Some(("dir", sub_matches)) => commands::dir(
             sub_matches,
             conn
         )?,
