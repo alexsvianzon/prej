@@ -480,8 +480,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
 
 [[package]]
-name = "pmd"
-version = "0.2.2"
+name = "prej"
+version = "0.6.2"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ignore",
+ "rusqlite",
+ "rust-yaml",
+ "serde_json",
+ "shared",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "prejd"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "rusqlite",
@@ -507,21 +522,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "project-manager"
-version = "0.6.1"
-dependencies = [
- "anyhow",
- "clap",
- "ignore",
- "rusqlite",
- "rust-yaml",
- "serde_json",
- "shared",
- "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -604,9 +604,9 @@ dependencies = [
 
 [[package]]
 name = "rust-yaml"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f719a9ea02f10d45a7211f36b3063dbe2524c69b94c96c468d06110d776e24d"
+checksum = "3597280f43f5f5c9b7e7f281eab078651cf3a551a439e86d9506fe3a85d74f1d"
 dependencies = [
  "base64",
  "indexmap",

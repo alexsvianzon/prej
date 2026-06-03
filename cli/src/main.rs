@@ -3,6 +3,9 @@
 mod commands;
 mod socket;
 
+use std::process::Command as ShellCommand;
+use std::fs::File;
+
 use shared::{protocol, constants};
 
 use clap::{Command, arg, command};
@@ -42,6 +45,13 @@ fn setup_database() -> Result<Connection, Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let conn = setup_database()?;
+
+    let daemon_out = File::create("out.txt").expect("could not open file");
+    let _ = ShellCommand::new("sudo")
+        .stdout(daemon_out)
+        .arg("./target/debug/prejd")
+        .spawn()
+        .expect("could not spawn daemon");
 
     let content = protocol::Content::Ping;
     socket::request_and_wait(&conn, content).await?;

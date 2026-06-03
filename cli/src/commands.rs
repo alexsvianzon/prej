@@ -5,8 +5,12 @@ use shared::constants;
 use std::fs;
 
 use rusqlite::{Connection, params};
+
 use ignore::Walk;
+
 use anyhow::Error;
+
+use rust_yaml::Yaml;
 
 pub struct Project {
     id: i32,

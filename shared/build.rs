@@ -9,7 +9,7 @@ fn main() {
     let dest_path = Path::new(&out_dir).join("constants.rs");
 
     let v = "0.1.0";
-    let n = "abcd";
+    let n = "prej";
     let o = env::consts::OS;
 
     let ad = format!("./{}/", n);
