@@ -12,6 +12,8 @@ case $OSTYPE in
     ;;
 esac
 
+mkdir -p /usr/local/bin
+
 case $SHELL in
   *zsh)
     sudo curl -o /usr/local/bin/prej.zsh https://raw.githubusercontent.com/alexsvianzon/prej/refs/heads/master/scripts/prej.zsh
