@@ -18,6 +18,7 @@ case $SHELL in
   *zsh)
     sudo curl -o /usr/local/bin/prej.zsh https://raw.githubusercontent.com/alexsvianzon/prej/refs/heads/beta/scripts/prej.zsh
     sudo curl -o /usr/local/bin/prej https://raw.githubusercontent.com/alexsvianzon/prej/refs/heads/beta/build/prej
+    sudo chmod +x /usr/local/bin/prej
 
     if ! grep -q "# --> prej setup -->" ~/.zshrc; then
         cat <<EOF >> ~/.zshrc
