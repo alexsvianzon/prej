@@ -12,7 +12,7 @@ case $OSTYPE in
     ;;
 esac
 
-mkdir -p /usr/local/bin
+sudo mkdir -p /usr/local/bin
 
 case $SHELL in
   *zsh)
