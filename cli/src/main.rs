@@ -4,6 +4,7 @@ mod commands;
 mod socket;
 
 use std::process::Command as ShellCommand;
+use std::fs;
 use std::fs::File;
 
 use shared::{protocol, constants};
@@ -15,6 +16,8 @@ use rusqlite::{Connection, Result};
 use anyhow::Error;
 
 fn setup_database() -> Result<Connection, Error> {
+    fs::create_dir_all(constants::APPDATA_DIR)?;
+
     let conn = Connection::open(format!("{}projects.db", constants::APPDATA_DIR))
         .expect("Failed to open a connection to the database");
 
