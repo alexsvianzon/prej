@@ -10,8 +10,8 @@ prej() {
 
   case "$1" in
     go)
-      sudo $HOME/Dev/Projects/pm/target/debug/prej go "$2"
-      cd "$(sudo $HOME/Dev/Projects/pm/target/debug/prej dir "$2")"
+      sudo /usr/local/bin/prej go "$2"
+      cd "$(sudo /usr/local/bin/prej dir "$2")"
 
       ;;
     *)
