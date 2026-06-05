@@ -15,7 +15,7 @@ prej() {
 
       ;;
     *)
-      sudo $HOME/Dev/Projects/pm/target/debug/prej "$@"
+      sudo /usr/local/bin/prej "$@"
 
       ;;
   esac
