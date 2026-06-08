@@ -1,104 +1,14 @@
-# Prejfile spec
-version: "0.3.1"
-
-# a Prejfile defines tasks that are run either by the daemon in the background or temporarily
-# by the terminal in the foreground
-#
-# defining tasks start with namespaces. a namespace provides tasks that can be run or invoked by
-# other tasks. there are four built in namespaces: input, setup, demand, and close. they are defined
-# below. you can also make your own namespaces which you can call manually from the CLI or by
-# invoking them from other tasks (!notmvp)
-#
-# the 'setup' namespace lists tasks that get run when the user jumps to a project. they are run in
-# the background by the daemon by default (but can be changed), and either stop when you leave the 
-# project or when you stop them manually
+version: "0.3.2"
 
 setup:
-  jekyll: # this is a namespace task
-    cmd: "jekyll" # define the main command that this gets run with this task
-    args: # define args that should get passed to the tasks's command
-      - "serve"
-
-  git-pull:
-    cmd: "git"
-    daemon: false # run this task in the foreground instead of the daemon like default
-    args:
+  git-pull: # this is a namespace task
+    cmd: "git" # define the main command that this task runs
+    args: # pass args to this task's command
       - "pull"
       - "origin"
 
-# the 'demand' namespace lists commands that are run when the user requests. they run in the
-# foreground by default and must be stopped before you can continue working (unless you run it in a
-# seperate terminal instance)
-
 demand:
-  test:
+  build:
     cmd: "cargo"
     args:
-      - "test"
-      - "-v"
-
-  web-server:
-    cmd: "python3"
-    daemon: true
-    args:
-      - "-m"
-      - "http.server"
-      - "8000"
-
-  git:
-    namespace: "git"  # invoking a namespace or its tasks as a command is another feature for tasks
-                      # (!notmvp)
-    run: all
-
-# the 'close' namespace lists commands that get run when the user:
-#   - calls the service manually
-#   - jumps to another project
-#
-# beyond the user-defined tasks listed, the 'close' namespace also kills the processes started by the
-# 'setup' service
-#
-# tasks can depend on other tasks, which means that they will run after the tasks they depend on
-
-close:
-  git:
-    namespace: "git"
-    run: all
-
-  cleanup:
-    cmd: "rm"
-    args:
-      - "-rf"
-      - "build/"
-
-# the 'input' namespace lists tasks that get run when the user is prompted for input. they are
-# special tasks that you should not call manually, but invoke into other tasks.
-
-input:
-  commit-message:
-    prompt: "enter commit message" # the message that gets printed to the terminal
-    store: "output::last-commit" # store variables (!notmvp) to database
-
-# you can define you own namespaces. they can be invoked manually (but manual calls should be in
-# the 'demand' namespace) or by other tasks. they are useful for grouping related tasks together
-
-git:
-  add:
-    cmd: "git"
-    args:
-      - "src/"
-
-  commit:
-    cmd: "git"
-    args:
-      - "commit"
-      - "-m"
-      - "?input:commit-message" # invoke another task's output
-    depends:
-      - add # define dependencies that must be run before this task
-
-  push:
-    cmd: "git"
-    args:
-      - "push"
-    depends:
-      - commit
+      - "build"

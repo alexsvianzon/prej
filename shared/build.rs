@@ -17,7 +17,7 @@ fn main() {
     let home = std::env::var("HOME").unwrap();
     let _ = fs::create_dir_all(format!("{home}/Library/Application Support/{}/", n)).unwrap();
     let ad = fs::canonicalize(format!("{home}/Library/Application Support/{}/", n)).unwrap();
-    let ifn = "initfile.yml";
+    let ifn = "Prejfile";
 
     let ifc = "1s and 0s";
 
