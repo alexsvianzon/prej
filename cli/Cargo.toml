@@ -8,8 +8,9 @@ shared = { path = "../shared" }
 anyhow = { workspace = true }
 rusqlite = { workspace = true }
 tokio = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 clap = {version = "4.6.1", features = ["cargo"]}
 ignore = "0.4.25"
-rust-yaml = "1.1.0"
+yaml_serde = "0.10"

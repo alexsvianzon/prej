@@ -4,6 +4,8 @@ use shared::constants;
 
 use std::fs;
 use std::io;
+use std::process::{Stdio, Command};
+use std::collections::HashMap;
 
 use rusqlite::{Connection, params};
 
@@ -11,8 +13,7 @@ use ignore::Walk;
 
 use anyhow::Error;
 
-use rust_yaml::Yaml;
-use rust_yaml::Value;
+use serde::Deserialize;
 
 pub struct Project {
     id: i32,
@@ -21,22 +22,21 @@ pub struct Project {
     init_file_loc: String,
 }
 
-#[derive(PartialEq)]
-enum TaskFrom {
-    All,
-    Setup,
-    Demand,
-    Close,
-    Input,
+#[derive(Debug, Deserialize)]
+struct Task {
+    cmd: String,
+    args: Option<Vec<String>>,
+    depends: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
-struct Task {
-    name: String,
-    cmd: String,
-    args: Vec<String>,
-    depends: Vec<String>,
+/* reserve this for future implementation with variables
+
+#[derive(Deserialize)]
+struct Namespace {
+    tasks: HashMap<String, Task>,
 }
+
+*/
 
 pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
@@ -82,6 +82,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     Ok(())
 }
+
 pub fn rm(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error>{
     let proj_name = matches
         .get_one::<String>("NAME")
@@ -115,105 +116,6 @@ pub fn list(conn: Connection) -> Result<(), Error> {
     Ok(())
 }
 
-fn parse_task(task_name: String, task_content: rust_yaml::Value) -> Result<Task, Error> {
-    let mut task_command: String = String::new();
-    let mut task_args: Vec<String> = Vec::new();
-    let mut task_deps: Vec<String> = Vec::new();
-
-    match task_content {
-        rust_yaml::Value::Mapping(map) => {
-            for (key, value) in map {
-                match key.as_str() {
-                    Some("cmd") => task_command = value.to_string(),
-                    Some("args") => {
-                        match value {
-                            rust_yaml::Value::Sequence(args) => {
-                                for arg in args {
-                                    task_args.push(arg.to_string());
-                                }
-                            }
-
-                            _ => panic!("no args"),
-                        }
-                    }
-
-                    _ => println!("unknown arg {}", key),
-                }
-            }
-        }
-
-        _ => panic!("AHH"),
-    }
-
-    let task = Task {
-        name: task_name,
-        cmd: task_command,
-        args: task_args,
-        depends: task_deps,
-    };
-
-    Ok(task)
-}
-
-fn parse_namespace(namespace: rust_yaml::Value, include_namespace: bool) -> Result<Vec<Task>, Error> {
-    let mut out = Vec::new();
-
-    if include_namespace {
-        match namespace {
-            rust_yaml::Value::Mapping(map) => {
-                for (task_name, task_content) in map {
-                    out.push(parse_task(task_name.to_string(), task_content)?);
-                }
-            }
-            _ => panic!("AHH"),
-        }
-    }
-
-    Ok(out)
-}
-
-fn parse_yaml(yaml: rust_yaml::Value, from: TaskFrom) -> Result<Vec<Task>, Error> {
-    let mut out = Vec::new();
-
-    match yaml {
-        rust_yaml::Value::Mapping(map) => {
-            for (key, value) in map {
-                match key.as_str() {
-                    Some("version") => println!("the 'version' value is for debugging only!"),
-                    Some("setup") => {
-                        out.append(&mut parse_namespace(
-                            value,
-                            from == TaskFrom::Setup || from == TaskFrom::All,
-                        )?);
-                    }
-                    Some("demand") => {
-                        out.append(&mut parse_namespace(
-                            value,
-                            from == TaskFrom::Demand || from == TaskFrom::All,
-                        )?);
-                    }
-                    Some("close") => {
-                        out.append(&mut parse_namespace(
-                            value,
-                            from == TaskFrom::Close || from == TaskFrom::All,
-                        )?);
-                    }
-                    Some("input") => {
-                        out.append(&mut parse_namespace(
-                            value,
-                            from == TaskFrom::Input || from == TaskFrom::All,
-                        )?);
-                    }
-                    _ => (),
-                }
-            }
-        }
-        _ => panic!("AHH"),
-    }
-
-    Ok(out)
-}
-
 pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")
@@ -225,8 +127,6 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     // in the initfile's 'start' service
     //
     // so far, the 'go' command can look up the project in the database and get the Prejfile
-
-    let yaml = Yaml::new();
 
     let mut statement = conn.prepare("SELECT id, name, path, init_file_loc FROM projects WHERE name = ?1")?;
     let query = statement.query_row(params![proj_name], |row| {
@@ -281,13 +181,26 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         Err(e) => panic!("{e}"),
     };
 
-    let prejfile = String::from_utf8(prejfile_bytes).unwrap();
-    let prejfile_yaml: rust_yaml::Value = yaml.load_str(&prejfile)?;
+    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
 
-    let tasks = parse_yaml(prejfile_yaml, TaskFrom::All)?;
+    for (namespace, tasks) in prejfile {
+        if namespace == "setup".to_string() {
+            for (name, task) in tasks {
+                println!("executing task: {}", name);
 
-    for task in tasks {
-        println!("{:#?}", task);
+                let mut cmd = Command::new(task.cmd);
+
+                if let Some(ref args) = task.args {
+                    cmd.args(args);
+                }
+
+                cmd.stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .spawn()
+                    .expect("could not spawn task: {name}");
+            }
+        }
     }
 
     Ok(())

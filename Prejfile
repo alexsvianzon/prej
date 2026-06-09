@@ -1,14 +1,17 @@
-version: "0.3.2"
-
 setup:
   git-pull: # this is a namespace task
-    cmd: "git" # define the main command that this task runs
+    cmd: git # define the main command that this task runs
     args: # pass args to this task's command
-      - "pull"
-      - "origin"
+      - pull
+      - origin
+
+  test:
+    cmd: echo
+    args:
+      - test
 
 demand:
   build:
-    cmd: "cargo"
+    cmd: cargo
     args:
-      - "build"
+      - build
