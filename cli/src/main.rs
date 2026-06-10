@@ -78,6 +78,10 @@ async fn main() -> Result<(), Error> {
                 .about("Print the directory of a project")
                 .arg(arg!([NAME])),
         )
+        .subcommand(
+            Command::new("active")
+                .about("Print the active project")
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -100,6 +104,7 @@ async fn main() -> Result<(), Error> {
             sub_matches,
             conn
         )?,
+        Some(("active", _sub_matches)) => commands::active()?,
         _ => unreachable!("Command does not exist or was not provided"),
     }
 

@@ -13,8 +13,9 @@ use ignore::Walk;
 
 use anyhow::Error;
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct Project {
     id: i32,
     name: String,
@@ -27,6 +28,12 @@ struct Task {
     cmd: String,
     args: Option<Vec<String>>,
     depends: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Cache {
+    project_active: bool,
+    project: Project,
 }
 
 /* reserve this for future implementation with variables
@@ -143,7 +150,7 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         Err(error) => panic!("Could not find that project in the database: {error}"),
     };
 
-    let prejfile_bytes = match fs::read(project.init_file_loc) {
+    let prejfile_bytes = match fs::read(&project.init_file_loc) {
         Ok(bytes) => bytes,
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
             let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
@@ -203,6 +210,13 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         }
     }
 
+    let cache = Cache {
+        project_active: true,
+        project,
+    };
+
+    fs::write(format!("{}/cache.json", constants::APPDATA_DIR), serde_json::to_string(&cache)?)?;
+
     Ok(())
 }
 
@@ -226,3 +240,38 @@ pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     Ok(())
 }
+
+// util function implemented for debugging (but could also be helpful later)
+pub fn active() -> Result<(), Error> {
+    let cache_bytes = fs::read(format!("{}/cache.json", constants::APPDATA_DIR))?;
+
+    let cache: Cache = serde_json::from_str(&String::from_utf8(cache_bytes)?)?;
+    
+    if cache.project_active == true {
+        println!("project {} (at path {}) is active", cache.project.name, cache.project.path);
+    }
+
+    Ok(())
+}
+
+
+// new command (run) needs to:
+//  - look up active project
+//  - get that project's initfileloc (assuming we are in that dir)
+//  - run the task the user wanted to
+//
+//  - needs conn
+//  - one arg
+
+/* 
+ *
+pub fn run(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
+    let task_target = matches
+        .get_one::<String>("TARGET")
+        .expect("Requires a task target for 'run'")
+        .to_string();
+
+    let c_project = match fs::read(format!("{}/cache.json", constants::APPDATA_DIR)) {
+        Ok(bytes) => bytes,
+        Err(ref e) if e == io::ErrorKind:: */
+
