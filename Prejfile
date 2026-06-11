@@ -15,3 +15,14 @@ demand:
     cmd: cargo
     args:
       - build
+
+  test:
+    cmd: echo
+    args:
+      - "test"
+
+close:
+  git-push:
+    cmd: git
+    args:
+      - push

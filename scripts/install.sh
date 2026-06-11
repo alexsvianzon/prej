@@ -1,7 +1,7 @@
 #!/bin/sh
 
 $os="$(uname -s)"
-$ver="0.7.0-beta"
+$ver="0.8.0"
 $source="https://raw.githubusercontent.com/alexsvianzon/prej/refs/tags/$ver"
 
 case $OSTYPE in
@@ -34,7 +34,7 @@ EOF
     fi
 
     ;;
-  *beta)
+  *bash)
     sudo curl -L -o /usr/local/bin/prej.bash "$source/scripts/prej.bash"
     sudo curl -L -o /usr/local/bin/prej "$source/build/prej"
     sudo chmod +x /usr/local/bin/prej

@@ -82,6 +82,15 @@ async fn main() -> Result<(), Error> {
             Command::new("active")
                 .about("Print the active project")
         )
+        .subcommand(
+            Command::new("close")
+                .about("Close the active project")
+        )
+        .subcommand(
+            Command::new("run")
+                .about("Run a task in the active project")
+                .arg(arg!([TARGET])),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -105,6 +114,13 @@ async fn main() -> Result<(), Error> {
             conn
         )?,
         Some(("active", _sub_matches)) => commands::active()?,
+        Some(("close", _sub_matches)) => commands::close(
+            conn,
+        )?,
+        Some(("run", sub_matches)) => commands::run(
+            sub_matches,
+            conn
+        )?,
         _ => unreachable!("Command does not exist or was not provided"),
     }
 

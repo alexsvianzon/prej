@@ -243,13 +243,101 @@ pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
 // util function implemented for debugging (but could also be helpful later)
 pub fn active() -> Result<(), Error> {
+    let cache = get_cache()?;
+    
+    if cache.project_active == true {
+        println!("{}", cache.project.name);
+    } else {
+        eprintln!("there is no active project");
+    }
+
+    Ok(())
+}
+
+fn get_cache() -> Result<Cache, Error> {
     let cache_bytes = fs::read(format!("{}/cache.json", constants::APPDATA_DIR))?;
 
     let cache: Cache = serde_json::from_str(&String::from_utf8(cache_bytes)?)?;
     
-    if cache.project_active == true {
-        println!("project {} (at path {}) is active", cache.project.name, cache.project.path);
+    Ok(cache)
+}
+
+pub fn close(conn: Connection) -> Result<(), Error> {
+    let cache = get_cache()?;
+
+    if cache.project_active == false {
+        eprintln!("there is no active project to close");
+        panic!();
     }
+
+    let project = cache.project;
+
+    let prejfile_bytes = match fs::read(&project.init_file_loc) {
+        Ok(bytes) => bytes,
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+            let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
+            let mut found: bool = false;
+            for result in Walk::new("./") {
+                let entry = match result {
+                    Ok(entry) => entry,
+                    Err(error) => panic!("Got an error while looking for init file: {error}"),
+                };
+
+                let name = entry.file_name();
+                let file_path = name.to_string_lossy();
+
+                if file_path.ends_with(constants::INIT_FILE_NAME) {
+                    println!("Found the init file!");
+                    found = true;
+                    init_file_loc = ["./".to_string(), file_path.to_string()].concat();
+
+                    break
+                }
+            }
+
+            if !found {
+                println!("Init file not found, creating one instead");
+                fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
+            }
+
+            conn.execute(
+                "UPDATE projects SET init_file_loc = ?1 WHERE name = ?2",
+                (&init_file_loc, &project.name),
+            )?;
+
+            fs::read(init_file_loc)?
+        }
+        Err(e) => panic!("{e}"),
+    };
+
+    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
+
+    for (namespace, tasks) in prejfile {
+        if namespace == "close".to_string() {
+            for (name, task) in tasks {
+                println!("executing task: {}", name);
+
+                let mut cmd = Command::new(task.cmd);
+
+                if let Some(ref args) = task.args {
+                    cmd.args(args);
+                }
+
+                cmd.stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .spawn()
+                    .expect("could not spawn task: {name}");
+            }
+        }
+    }
+
+    let cache = Cache {
+        project_active: true,
+        project,
+    };
+
+    fs::write(format!("{}/cache.json", constants::APPDATA_DIR), serde_json::to_string(&cache)?)?;
 
     Ok(())
 }
@@ -263,15 +351,89 @@ pub fn active() -> Result<(), Error> {
 //  - needs conn
 //  - one arg
 
-/* 
- *
 pub fn run(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
-    let task_target = matches
+    let target = matches
         .get_one::<String>("TARGET")
-        .expect("Requires a task target for 'run'")
+        .expect("requires a target to run")
         .to_string();
+    
+    let cache = get_cache()?;
 
-    let c_project = match fs::read(format!("{}/cache.json", constants::APPDATA_DIR)) {
+    if cache.project_active == false {
+        eprintln!("there is no active project to close");
+        panic!();
+    }
+
+    let project = cache.project;
+
+    let prejfile_bytes = match fs::read(&project.init_file_loc) {
         Ok(bytes) => bytes,
-        Err(ref e) if e == io::ErrorKind:: */
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+            let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
+            let mut found: bool = false;
+            for result in Walk::new("./") {
+                let entry = match result {
+                    Ok(entry) => entry,
+                    Err(error) => panic!("Got an error while looking for init file: {error}"),
+                };
 
+                let name = entry.file_name();
+                let file_path = name.to_string_lossy();
+
+                if file_path.ends_with(constants::INIT_FILE_NAME) {
+                    println!("Found the init file!");
+                    found = true;
+                    init_file_loc = ["./".to_string(), file_path.to_string()].concat();
+
+                    break
+                }
+            }
+
+            if !found {
+                println!("Init file not found, creating one instead");
+                fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
+            }
+
+            conn.execute(
+                "UPDATE projects SET init_file_loc = ?1 WHERE name = ?2",
+                (&init_file_loc, &project.name),
+            )?;
+
+            fs::read(init_file_loc)?
+        }
+        Err(e) => panic!("{e}"),
+    };
+
+    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
+
+    for (namespace, tasks) in prejfile {
+        if namespace == "demand".to_string() {
+            for (name, task) in tasks {
+                if name == target {
+                    println!("executing task: {}", name);
+
+                    let mut cmd = Command::new(task.cmd);
+
+                    if let Some(ref args) = task.args {
+                        cmd.args(args);
+                    }
+
+                    let _ = cmd.stdout(Stdio::inherit())
+                        .stderr(Stdio::inherit())
+                        .status()
+                        .expect("could not spawn task: {name}");
+                }
+            }
+        }
+    }
+
+    let cache = Cache {
+        project_active: true,
+        project,
+    };
+
+    fs::write(format!("{}/cache.json", constants::APPDATA_DIR), serde_json::to_string(&cache)?)?;
+
+    Ok(())
+}

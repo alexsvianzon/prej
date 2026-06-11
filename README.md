@@ -38,6 +38,7 @@ In its beta state, `prej` can:
     - macOS
   - Shells:
     - `zsh`
+    - `bash` (untested)
 
 ## Planned Features
 

@@ -14,6 +14,16 @@ prej() {
       sudo /usr/local/bin/prej go "$2"
 
       ;;
+    run)
+      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")"
+      sudo /usr/local/bin/prej run "$2"
+
+      ;;
+    close)
+      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")"
+      sudo /usr/local/bin/prej close
+
+      ;;
     *)
       sudo /usr/local/bin/prej "$@"
 
