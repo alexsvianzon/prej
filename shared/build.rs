@@ -2,7 +2,7 @@
 
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use directories::ProjectDirs;
 
@@ -14,21 +14,24 @@ fn main() {
     let n = "prej";
     let o = env::consts::OS;
 
+    let mut ad = PathBuf::new();
     if cfg!(target_os = "windows") {
         let home = std::env::var("USERPROFILE").unwrap();
 
         let _ = fs::create_dir_all(format!("{home}/AppData/{}/", n)).unwrap();
-        let ad = fs::canonicalize(format!("{home}/AppData/{}/", n)).unwrap();
+        ad = fs::canonicalize(format!("{home}/AppData/{}/", n)).unwrap();
     } else if cfg!(target_family = "unix") {
         let home = std::env::var("HOME").unwrap();
 
         if cfg!(target_os = "macos") {
             let _ = fs::create_dir_all(format!("{home}/Library/Application Support/{}/", n)).unwrap();
-            let ad = fs::canonicalize(format!("{home}/Library/Application Support/{}/", n)).unwrap();
+            ad = fs::canonicalize(format!("{home}/Library/Application Support/{}/", n)).unwrap();
         } else if cfg!(target_os = "linux") {
             let _ = fs::create_dir_all(format!("{home}/.local/share/{}/", n)).unwrap();
-            let ad = fs::canonicalize(format!("{home}/.local/share/{}/", n)).unwrap();
+            ad = fs::canonicalize(format!("{home}/.local/share/{}/", n)).unwrap();
         }
+    } else {
+        unimplemented!();
     }
 
     let ifn = "Prejfile";
