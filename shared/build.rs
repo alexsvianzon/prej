@@ -19,7 +19,7 @@ fn main() {
 
         let _ = fs::create_dir_all(format!("{home}/AppData/{}/", n)).unwrap();
         let ad = fs::canonicalize(format!("{home}/AppData/{}/", n)).unwrap();
-    } else if cfg!(target_os = "unix") {
+    } else if cfg!(target_family = "unix") {
         let home = std::env::var("HOME").unwrap();
 
         if cfg!(target_os = "macos") {
