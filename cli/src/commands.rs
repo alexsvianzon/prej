@@ -241,7 +241,6 @@ pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     Ok(())
 }
 
-// util function implemented for debugging (but could also be helpful later)
 pub fn active() -> Result<(), Error> {
     let cache = get_cache()?;
     
@@ -341,15 +340,6 @@ pub fn close(conn: Connection) -> Result<(), Error> {
 
     Ok(())
 }
-
-
-// new command (run) needs to:
-//  - look up active project
-//  - get that project's initfileloc (assuming we are in that dir)
-//  - run the task the user wanted to
-//
-//  - needs conn
-//  - one arg
 
 pub fn run(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let target = matches

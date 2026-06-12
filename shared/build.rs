@@ -14,11 +14,24 @@ fn main() {
     let n = "prej";
     let o = env::consts::OS;
 
-    let home = std::env::var("HOME").unwrap();
-    let _ = fs::create_dir_all(format!("{home}/Library/Application Support/{}/", n)).unwrap();
-    let ad = fs::canonicalize(format!("{home}/Library/Application Support/{}/", n)).unwrap();
-    let ifn = "Prejfile";
+    if cfg!(target_os = "windows") {
+        let home = std::env::var("USERPROFILE").unwrap();
 
+        let _ = fs::create_dir_all(format!("{home}/AppData/{}/", n)).unwrap();
+        let ad = fs::canonicalize(format!("{home}/AppData/{}/", n)).unwrap();
+    } else if cfg!(target_os = "unix") {
+        let home = std::env::var("HOME").unwrap();
+
+        if cfg!(target_os = "macos") {
+            let _ = fs::create_dir_all(format!("{home}/Library/Application Support/{}/", n)).unwrap();
+            let ad = fs::canonicalize(format!("{home}/Library/Application Support/{}/", n)).unwrap();
+        } else if cfg!(target_os = "linux") {
+            let _ = fs::create_dir_all(format!("{home}/.local/share/{}/", n)).unwrap();
+            let ad = fs::canonicalize(format!("{home}/.local/share/{}/", n)).unwrap();
+        }
+    }
+
+    let ifn = "Prejfile";
     let ifc = "1s and 0s";
 
     fs::write(
