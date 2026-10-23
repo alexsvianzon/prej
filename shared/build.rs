@@ -34,8 +34,8 @@ fn main() {
         unimplemented!();
     }
 
-    let ifn = "Prejfile";
-    let ifc = "1s and 0s";
+    let pf = "Prejfile";
+    let pfc = "1s and 0s";
 
     fs::write(
         &dest_path,
@@ -45,10 +45,10 @@ fn main() {
             pub const OS: &str = \"{}\";\n\
             \n\
             pub const APPDATA_DIR: &str = \"{}/\";\n\
-            pub const INIT_FILE_NAME: &str = \"{}\";\n\
+            pub const PREJFILE: &str = \"{}\";\n\
             \n\
-            pub const INIT_FILE_CONTENT: &str = \"{}\";\n",
-        v, n, o, ad.display().to_string(), ifn, ifc)
+            pub const PREJFILE_CONTENT: &str = \"{}\";\n",
+        v, n, o, ad.display().to_string(), pf, pfc)
     ).unwrap();
     println!("cargo:rerun-if-changed=build.rs");
 }

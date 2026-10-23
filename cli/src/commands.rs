@@ -1,33 +1,25 @@
-// commands.rs
-
 use shared::constants;
+use shared::task::Task;
+
+use crate::grapher::{ build_graph, topological_order};
 
 use std::fs;
 use std::io;
-use std::process::{Stdio, Command};
+use std::process::{ Stdio, Command };
 use std::collections::HashMap;
 
-use rusqlite::{Connection, params};
-
+use rusqlite::{ Connection, params };
 use ignore::Walk;
-
 use anyhow::Error;
-
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize };
+use serde_json::to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct Project {
+struct Project {
     id: i32,
     name: String,
     path: String,
-    init_file_loc: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Task {
-    cmd: String,
-    args: Option<Vec<String>>,
-    depends: Option<Vec<String>>,
+    prejfile_loc: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -36,7 +28,9 @@ struct Cache {
     project: Project,
 }
 
-/* reserve this for future implementation with variables
+/*
+
+reserve this for future implementation with variables
 
 #[derive(Deserialize)]
 struct Namespace {
@@ -45,47 +39,126 @@ struct Namespace {
 
 */
 
+fn read_prejfile(project: &Project, conn: &Connection) -> Result<Vec<u8>, Error> {
+    match fs::read(&project.prejfile_loc) {
+        Ok(bytes) => Ok(bytes),
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+            let mut prejfile_loc: String = format!("./{}", constants::PREJFILE);
+            let mut found: bool = false;
+            for result in Walk::new("./") {
+                let entry = match result {
+                    Ok(entry) => entry,
+                    Err(error) => panic!("Got an error while looking for Prejfile: {error}"),
+                };
+
+                let name = entry.file_name();
+                let file_path = name.to_string_lossy();
+
+                if file_path.ends_with(constants::PREJFILE) {
+                    println!("Found the Prejfile!");
+                    found = true;
+                    prejfile_loc = ["./".to_string(), file_path.to_string()].concat();
+
+                    break
+                }
+            }
+
+            if !found {
+                println!("Prejfile not found, creating one instead");
+                fs::write(format!("./{}", constants::PREJFILE), constants::PREJFILE_CONTENT)?;
+            }
+
+            conn.execute(
+                "UPDATE projects SET prejfile_loc = ?1 WHERE name = ?2",
+                (&prejfile_loc, &project.name),
+            )?;
+
+            Ok(fs::read(prejfile_loc)?)
+        }
+        Err(e) => panic!("{e}"),
+    }
+}
+
+fn run_namespace(prejfile: HashMap<String, HashMap<String, Task>>, target: &str) {
+    let Some(tasks) = prejfile.get(target) else {
+        return;
+    };
+
+    let (id_list, task_list): (Vec<String>, Vec<&Task>) = tasks
+        .iter()
+        .map(|(id, task)| (id.clone(), task))
+        .unzip();
+
+    let graph = build_graph(&task_list, &id_list).unwrap();
+    let order = topological_order(&graph).unwrap();
+
+    for task_id in order {
+        println!("Running task: {}", task_id);
+
+        let task = tasks
+            .get(&task_id)
+            .expect("task ID in graph should exist in HashMap");
+
+        task.run_task();
+    }
+}
+
 pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")
         .expect("Requires a name for 'add'")
         .to_string();
  
-    let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
+    let mut prejfile_loc: String = format!("./{}", constants::PREJFILE); // fallback location at directory root
     let mut found: bool = false;
-    for result in Walk::new("./") {
-        let entry = match result {
-            Ok(entry) => entry,
-            Err(error) => panic!("Got an error while looking for init file: {error}"),
+    for item in Walk::new("./") {
+        let entry = match item {
+            Ok(dir_entry) => dir_entry,
+            Err(error) => panic!("Got an error while looking for a Prejfile: {error}"),
         };
 
         let name = entry.file_name();
         let file_path = name.to_string_lossy();
 
-        if file_path.ends_with(constants::INIT_FILE_NAME) {
-            println!("Found the init file!");
+        println!("{}", file_path);
+
+        if file_path.ends_with(constants::PREJFILE) {
+            println!("Found a Prejfile!");
             found = true;
-            init_file_loc = ["./".to_string(), file_path.to_string()].concat();
+            prejfile_loc = ["./".to_string(), file_path.to_string()].concat();
 
             break
         }
     }
 
     if !found {
-        println!("Init file not found, creating one instead");
-        fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
+        println!("Prejfile not found, creating one instead");
+        fs::write(format!("./{}", constants::PREJFILE), constants::PREJFILE_CONTENT)?;
     }
     
-    let project = Project { id: 0,
-        name: proj_name,
+    let project = Project { 
+        id: 0,
+        name: proj_name.clone(),
         path: fs::canonicalize("./")?.to_string_lossy().to_string(),
-        init_file_loc,
+        prejfile_loc,
     };
 
-    conn.execute(
-        "INSERT INTO projects (name, path, init_file_loc) VALUES (?1, ?2, ?3)",
-        (&project.name, &project.path, &project.init_file_loc),
-    )?;
+    let mut stmt = conn.prepare("SELECT EXISTS(SELECT 1 FROM projects WHERE name = ?1)")?;
+    let project_exists: bool = stmt.query_row(params![proj_name.to_string()], |row| {
+        row.get(0)
+    }).expect("unable to query database");
+
+    if project_exists == false {
+        conn.execute(
+            "INSERT INTO projects (name, path, prejfile_loc) VALUES (?1, ?2, ?3)",
+            (&project.name, &project.path, &project.prejfile_loc),
+        )?;
+    } else {
+        eprintln!("A project under this name already exists.");
+        eprintln!("Would you like to change its path instead?");
+
+        // TODO: implement path changing
+    }
 
     Ok(())
 }
@@ -97,7 +170,7 @@ pub fn rm(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error>{
         .to_string();
 
     conn.execute("DELETE FROM projects WHERE name = ?1",
-        ((proj_name),),
+        (proj_name,),
     )?;
 
     Ok(())
@@ -110,12 +183,12 @@ pub fn list(conn: Connection) -> Result<(), Error> {
             id: row.get("id")?,
             name: row.get("name")?,
             path: row.get("path")?,
-            init_file_loc: String::new(),
+            prejfile_loc: String::new(),
         })
     })?;
 
     for proj in query {
-        let project = proj.unwrap();
+        let project = proj?;
 
         println!("{}. Project '{}' at '{}'", project.id, project.name, project.path);
     }
@@ -126,22 +199,22 @@ pub fn list(conn: Connection) -> Result<(), Error> {
 pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")
-        .expect("Requries a name for 'go'")
+        .expect("Requires a name for 'go'")
         .to_string();
     
     // the 'go' command needs to look up the project in the database, jump to that directory, start
     // the daemon if necessary, connect to the daemon, and tell the daemon to start the processes
-    // in the initfile's 'start' service
+    // in the init file's 'start' service
     //
     // so far, the 'go' command can look up the project in the database and get the Prejfile
 
-    let mut statement = conn.prepare("SELECT id, name, path, init_file_loc FROM projects WHERE name = ?1")?;
+    let mut statement = conn.prepare("SELECT id, name, path, prejfile_loc FROM projects WHERE name = ?1")?;
     let query = statement.query_row(params![proj_name], |row| {
         Ok(Project {
             id: row.get("id")?,
             name: row.get("name")?,
             path: row.get("path")?,
-            init_file_loc: row.get("init_file_loc")?,
+            prejfile_loc: row.get("prejfile_loc")?,
         })
     });
 
@@ -150,65 +223,12 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         Err(error) => panic!("Could not find that project in the database: {error}"),
     };
 
-    let prejfile_bytes = match fs::read(&project.init_file_loc) {
-        Ok(bytes) => bytes,
-        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
-            let mut found: bool = false;
-            for result in Walk::new("./") {
-                let entry = match result {
-                    Ok(entry) => entry,
-                    Err(error) => panic!("Got an error while looking for init file: {error}"),
-                };
+    let prejfile_bytes = read_prejfile(&project, &conn)?;
 
-                let name = entry.file_name();
-                let file_path = name.to_string_lossy();
-
-                if file_path.ends_with(constants::INIT_FILE_NAME) {
-                    println!("Found the init file!");
-                    found = true;
-                    init_file_loc = ["./".to_string(), file_path.to_string()].concat();
-
-                    break
-                }
-            }
-
-            if !found {
-                println!("Init file not found, creating one instead");
-                fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
-            }
-
-            conn.execute(
-                "UPDATE projects SET init_file_loc = ?1 WHERE name = ?2",
-                (&init_file_loc, &project.name),
-            )?;
-
-            fs::read(init_file_loc)?
-        }
-        Err(e) => panic!("{e}"),
-    };
-
-    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile_str = String::from_utf8(prejfile_bytes)?;
     let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
 
-    for (namespace, tasks) in prejfile {
-        if namespace == "setup".to_string() {
-            for (name, task) in tasks {
-                println!("executing task: {}", name);
-
-                let mut cmd = Command::new(task.cmd);
-
-                if let Some(ref args) = task.args {
-                    cmd.args(args);
-                }
-
-                cmd.stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .spawn()
-                    .expect("could not spawn task: {name}");
-            }
-        }
-    }
+    run_namespace(prejfile, "setup");
 
     let cache = Cache {
         project_active: true,
@@ -223,7 +243,7 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")
-        .expect("Requries a name for 'dir'")
+        .expect("Requires a name for 'dir'")
         .to_string();
     
     let mut statement = conn.prepare("SELECT path FROM projects WHERE name = ?1")?;
@@ -247,7 +267,7 @@ pub fn active() -> Result<(), Error> {
     if cache.project_active == true {
         println!("{}", cache.project.name);
     } else {
-        eprintln!("there is no active project");
+        eprintln!("There is no active project");
     }
 
     Ok(())
@@ -265,71 +285,18 @@ pub fn close(conn: Connection) -> Result<(), Error> {
     let cache = get_cache()?;
 
     if cache.project_active == false {
-        eprintln!("there is no active project to close");
+        eprintln!("There is no active project to close");
         panic!();
     }
 
     let project = cache.project;
 
-    let prejfile_bytes = match fs::read(&project.init_file_loc) {
-        Ok(bytes) => bytes,
-        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
-            let mut found: bool = false;
-            for result in Walk::new("./") {
-                let entry = match result {
-                    Ok(entry) => entry,
-                    Err(error) => panic!("Got an error while looking for init file: {error}"),
-                };
+    let prejfile_bytes = read_prejfile(&project, &conn)?;
 
-                let name = entry.file_name();
-                let file_path = name.to_string_lossy();
-
-                if file_path.ends_with(constants::INIT_FILE_NAME) {
-                    println!("Found the init file!");
-                    found = true;
-                    init_file_loc = ["./".to_string(), file_path.to_string()].concat();
-
-                    break
-                }
-            }
-
-            if !found {
-                println!("Init file not found, creating one instead");
-                fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
-            }
-
-            conn.execute(
-                "UPDATE projects SET init_file_loc = ?1 WHERE name = ?2",
-                (&init_file_loc, &project.name),
-            )?;
-
-            fs::read(init_file_loc)?
-        }
-        Err(e) => panic!("{e}"),
-    };
-
-    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile_str = String::from_utf8(prejfile_bytes)?;
     let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
 
-    for (namespace, tasks) in prejfile {
-        if namespace == "close".to_string() {
-            for (name, task) in tasks {
-                println!("executing task: {}", name);
-
-                let mut cmd = Command::new(task.cmd);
-
-                if let Some(ref args) = task.args {
-                    cmd.args(args);
-                }
-
-                cmd.stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .spawn()
-                    .expect("could not spawn task: {name}");
-            }
-        }
-    }
+    run_namespace(prejfile, "close");
 
     let cache = Cache {
         project_active: true,
@@ -346,7 +313,15 @@ pub fn run(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .get_one::<String>("TARGET")
         .expect("requires a target to run")
         .to_string();
-    
+
+    let namespace = matches
+        .get_one::<String>("namespace")
+        .expect("Requires a namespace for run")
+        .to_string();
+
+    println!("Running in namespace '{}'", namespace);
+
+
     let cache = get_cache()?;
 
     if cache.project_active == false {
@@ -356,66 +331,43 @@ pub fn run(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
     let project = cache.project;
 
-    let prejfile_bytes = match fs::read(&project.init_file_loc) {
-        Ok(bytes) => bytes,
-        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            let mut init_file_loc: String = format!("./{}", constants::INIT_FILE_NAME);
-            let mut found: bool = false;
-            for result in Walk::new("./") {
-                let entry = match result {
-                    Ok(entry) => entry,
-                    Err(error) => panic!("Got an error while looking for init file: {error}"),
-                };
+    let prejfile_bytes = read_prejfile(&project, &conn)?;
 
-                let name = entry.file_name();
-                let file_path = name.to_string_lossy();
-
-                if file_path.ends_with(constants::INIT_FILE_NAME) {
-                    println!("Found the init file!");
-                    found = true;
-                    init_file_loc = ["./".to_string(), file_path.to_string()].concat();
-
-                    break
-                }
-            }
-
-            if !found {
-                println!("Init file not found, creating one instead");
-                fs::write(format!("./{}", constants::INIT_FILE_NAME), constants::INIT_FILE_CONTENT)?;
-            }
-
-            conn.execute(
-                "UPDATE projects SET init_file_loc = ?1 WHERE name = ?2",
-                (&init_file_loc, &project.name),
-            )?;
-
-            fs::read(init_file_loc)?
-        }
-        Err(e) => panic!("{e}"),
-    };
-
-    let prejfile_str = String::from_utf8(prejfile_bytes).unwrap();
+    let prejfile_str = String::from_utf8(prejfile_bytes)?;
     let prejfile: HashMap<String, HashMap<String, Task>> = yaml_serde::from_str(&prejfile_str)?;
 
-    for (namespace, tasks) in prejfile {
-        if namespace == "demand".to_string() {
-            for (name, task) in tasks {
-                if name == target {
-                    println!("executing task: {}", name);
-
-                    let mut cmd = Command::new(task.cmd);
-
-                    if let Some(ref args) = task.args {
-                        cmd.args(args);
+    if let Some(tasks) = prejfile.get(namespace.as_str()) {
+        if tasks.contains_key(&target) {
+            let mut required = std::collections::HashSet::new();
+            let mut pending = vec![target.clone()];
+            while let Some(task_id) = pending.pop() {
+                if required.insert(task_id.clone()) {
+                    if let Some(task) = tasks.get(&task_id) {
+                        pending.extend(task.depends.iter().flatten().cloned());
                     }
-
-                    let _ = cmd.stdout(Stdio::inherit())
-                        .stderr(Stdio::inherit())
-                        .status()
-                        .expect("could not spawn task: {name}");
                 }
             }
+
+            let (id_list, task_list): (Vec<String>, Vec<&Task>) = tasks
+                .iter()
+                .filter(|(id, _)| required.contains(*id))
+                .map(|(id, task)| (id.clone(), task))
+                .unzip();
+
+            let graph = build_graph(&task_list, &id_list).unwrap();
+            let order = topological_order(&graph).unwrap();
+
+            for name in order.into_iter().filter(|name| required.contains(name)) {
+                let task = tasks
+                    .get(&name)
+                    .expect("task ID in graph should exist in HashMap");
+                println!("executing task: {}", name);
+
+                task.run_task();
+            }
         }
+    } else {
+        eprintln!("Could not find namespace '{}'", namespace);
     }
 
     let cache = Cache {

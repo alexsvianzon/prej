@@ -2,17 +2,12 @@
 
 mod commands;
 mod socket;
+mod grapher;
 
-use std::process::Command as ShellCommand;
 use std::fs;
-use std::fs::File;
-
-use shared::{protocol, constants};
-
-use clap::{Command, arg, command};
-
-use rusqlite::{Connection, Result};
-
+use shared::constants;
+use clap::{ Command, arg, command };
+use rusqlite::{ Connection, Result };
 use anyhow::Error;
 
 fn setup_database() -> Result<Connection, Error> {
@@ -25,10 +20,9 @@ fn setup_database() -> Result<Connection, Error> {
  
     conn.execute(
         "CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
+            name TEXT PRIMARY KEY,
             path TEXT NOT NULL,
-            init_file_loc TEXT
+            prejfile_loc TEXT
         )",
         ()
     )?;
@@ -53,7 +47,7 @@ async fn main() -> Result<(), Error> {
     let matches = command!()
         .subcommand_required(true)
         .version(constants::VERSION)
-        .about("A simple registry-based project manager")
+        .about("A registry-based project manager")
         .subcommand(
             Command::new("add")
                 .about("Registers a new project")
@@ -88,7 +82,11 @@ async fn main() -> Result<(), Error> {
         )
         .subcommand(
             Command::new("run")
-                .about("Run a task in the active project")
+                .about("Run a task in the active project, and its dependencies")
+                .arg(
+                    arg!(-n --namespace <NAMESPACE> "The namespace the task is in")
+                        .default_value("demand")
+                )
                 .arg(arg!([TARGET])),
         )
         .get_matches();

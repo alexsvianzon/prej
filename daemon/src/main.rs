@@ -85,7 +85,7 @@ async fn main() -> Result<(), Error> {
         tokio::spawn(worker(i, rx_clone));
     }
 
-    let listen = UnixListener::bind(path).unwrap();
+    let listen = UnixListener::bind(path)?;
 
     loop {
         let (stream, _) = listen.accept().await?;
