@@ -5,14 +5,12 @@ use crate::grapher::{ build_graph, topological_order};
 
 use std::fs;
 use std::io;
-use std::process::{ Stdio, Command };
 use std::collections::HashMap;
 
 use rusqlite::{ Connection, params };
 use ignore::Walk;
 use anyhow::Error;
 use serde::{Serialize, Deserialize };
-use serde_json::to_string;
 
 #[derive(Serialize, Deserialize)]
 struct Project {
@@ -39,34 +37,40 @@ struct Namespace {
 
 */
 
+fn locate_prejfile() -> Result<String, Error> {
+    let mut prejfile_loc: String = format!("./{}", constants::PREJFILE);
+    let mut found: bool = false;
+    for result in Walk::new("./") {
+        let entry = match result {
+            Ok(entry) => entry,
+            Err(error) => panic!("Got an error while looking for Prejfile: {error}"),
+        };
+
+        let name = entry.file_name();
+        let file_path = name.to_string_lossy();
+
+        if file_path.ends_with(constants::PREJFILE) {
+            println!("Found the Prejfile!");
+            found = true;
+            prejfile_loc = ["./".to_string(), file_path.to_string()].concat();
+
+            break
+        }
+    }
+
+    if !found {
+        println!("Prejfile not found, creating one instead");
+        fs::write(format!("./{}", constants::PREJFILE), constants::PREJFILE_CONTENT)?;
+    }
+
+    Ok(prejfile_loc)
+}
+
 fn read_prejfile(project: &Project, conn: &Connection) -> Result<Vec<u8>, Error> {
     match fs::read(&project.prejfile_loc) {
         Ok(bytes) => Ok(bytes),
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            let mut prejfile_loc: String = format!("./{}", constants::PREJFILE);
-            let mut found: bool = false;
-            for result in Walk::new("./") {
-                let entry = match result {
-                    Ok(entry) => entry,
-                    Err(error) => panic!("Got an error while looking for Prejfile: {error}"),
-                };
-
-                let name = entry.file_name();
-                let file_path = name.to_string_lossy();
-
-                if file_path.ends_with(constants::PREJFILE) {
-                    println!("Found the Prejfile!");
-                    found = true;
-                    prejfile_loc = ["./".to_string(), file_path.to_string()].concat();
-
-                    break
-                }
-            }
-
-            if !found {
-                println!("Prejfile not found, creating one instead");
-                fs::write(format!("./{}", constants::PREJFILE), constants::PREJFILE_CONTENT)?;
-            }
+            let prejfile_loc: String = locate_prejfile()?;
 
             conn.execute(
                 "UPDATE projects SET prejfile_loc = ?1 WHERE name = ?2",
@@ -109,32 +113,7 @@ pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .expect("Requires a name for 'add'")
         .to_string();
  
-    let mut prejfile_loc: String = format!("./{}", constants::PREJFILE); // fallback location at directory root
-    let mut found: bool = false;
-    for item in Walk::new("./") {
-        let entry = match item {
-            Ok(dir_entry) => dir_entry,
-            Err(error) => panic!("Got an error while looking for a Prejfile: {error}"),
-        };
-
-        let name = entry.file_name();
-        let file_path = name.to_string_lossy();
-
-        println!("{}", file_path);
-
-        if file_path.ends_with(constants::PREJFILE) {
-            println!("Found a Prejfile!");
-            found = true;
-            prejfile_loc = ["./".to_string(), file_path.to_string()].concat();
-
-            break
-        }
-    }
-
-    if !found {
-        println!("Prejfile not found, creating one instead");
-        fs::write(format!("./{}", constants::PREJFILE), constants::PREJFILE_CONTENT)?;
-    }
+    let prejfile_loc: String = locate_prejfile()?;
     
     let project = Project { 
         id: 0,

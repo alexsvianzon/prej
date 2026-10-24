@@ -10,17 +10,17 @@ prej() {
 
   case "$1" in
     go)
-      cd "$(sudo /usr/local/bin/prej dir "$2")"
+      cd "$(sudo /usr/local/bin/prej dir "$2")" || exit
       sudo /usr/local/bin/prej go "$2"
 
       ;;
     run)
-      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")"
+      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")" || exit
       sudo /usr/local/bin/prej run "$2"
 
       ;;
     close)
-      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")"
+      cd "$(sudo /usr/local/bin/prej dir "$(sudo /usr/local/bin/prej active)")" || exit
       sudo /usr/local/bin/prej close
 
       ;;
