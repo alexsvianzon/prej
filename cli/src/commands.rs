@@ -107,6 +107,14 @@ fn run_namespace(prejfile: HashMap<String, HashMap<String, Task>>, target: &str)
     }
 }
 
+fn get_cache() -> Result<Cache, Error> {
+    let cache_bytes = fs::read(format!("{}/cache.json", constants::APPDATA_DIR))?;
+
+    let cache: Cache = serde_json::from_str(&String::from_utf8(cache_bytes)?)?;
+
+    Ok(cache)
+}
+
 pub fn add(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
     let proj_name = matches
         .get_one::<String>("NAME")
@@ -180,12 +188,18 @@ pub fn go(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
         .get_one::<String>("NAME")
         .expect("Requires a name for 'go'")
         .to_string();
-    
-    // the 'go' command needs to look up the project in the database, jump to that directory, start
-    // the daemon if necessary, connect to the daemon, and tell the daemon to start the processes
-    // in the init file's 'start' service
-    //
-    // so far, the 'go' command can look up the project in the database and get the Prejfile
+
+    /*
+    the 'go' command should be able to loop up a project in the database, jump to that directory,
+    start the daemon if necessary, connect to the daemon, and tell the daemon to start the
+    processes in the init file's 'start' namespace
+
+    the go command can switch to the directory and run tasks, unless the requested project is
+    active already
+     */
+
+    let cache = get_cache()?;
+    if cache.project.name == proj_name { return Ok(()) }
 
     let mut statement = conn.prepare("SELECT id, name, path, prejfile_loc FROM projects WHERE name = ?1")?;
     let query = statement.query_row(params![proj_name], |row| {
@@ -242,7 +256,7 @@ pub fn dir(matches: &clap::ArgMatches, conn: Connection) -> Result<(), Error> {
 
 pub fn active() -> Result<(), Error> {
     let cache = get_cache()?;
-    
+
     if cache.project_active == true {
         println!("{}", cache.project.name);
     } else {
@@ -250,14 +264,6 @@ pub fn active() -> Result<(), Error> {
     }
 
     Ok(())
-}
-
-fn get_cache() -> Result<Cache, Error> {
-    let cache_bytes = fs::read(format!("{}/cache.json", constants::APPDATA_DIR))?;
-
-    let cache: Cache = serde_json::from_str(&String::from_utf8(cache_bytes)?)?;
-    
-    Ok(cache)
 }
 
 pub fn close(conn: Connection) -> Result<(), Error> {
