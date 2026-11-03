@@ -1,19 +1,24 @@
 setup:
-  git-pull: # this is a namespace task
+  git-pull:  # this is a namespace task
     cmd: git # define the main command that this task runs
-    args: # pass args to this task's command
+    args:    # pass args to this task's command
       - pull
       - origin
-
-  test:
-    cmd: echo
-    args:
-      - test
 
 demand:
   build:
     cmd: cargo
     args:
+      - build
+
+  install:
+    cmd: cp
+    args:
+      - ./target/debug/prej
+      - /usr/local/bin/prej
+    flags:
+      - sudo
+    depends:
       - build
 
   test:
@@ -26,3 +31,9 @@ close:
     cmd: git
     args:
       - push
+
+foo:
+  bar:
+    cmd: echo
+    args:
+      - "test"
